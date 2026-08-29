@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import {
   Activity,
-  Brain,
+  BrainCircuit,
   Check,
   CircleHelp,
   Download,
@@ -235,7 +235,7 @@ export default function Home() {
       <aside className="sidebar">
         <a className="brand dark-brand" href="#dashboard">
           <span className="brand-mark">
-            <Brain size={22} />
+            <BrainCircuit size={22} />
           </span>
           <span>
             <strong>
@@ -323,7 +323,7 @@ export default function Home() {
             </div>
             <div className="kpi-card">
               <span className="kpi-icon pink">
-                <Brain size={20} />
+                <BrainCircuit size={20} />
               </span>
               <div>
                 <small>Tumor Detected</small>
@@ -453,7 +453,7 @@ export default function Home() {
                     className={`prediction-hero ${isNoTumor(result.prediction) ? "no-tumor" : ""}`}
                   >
                     <span className="prediction-symbol">
-                      <Brain size={25} />
+                      <BrainCircuit size={25} />
                     </span>
                     <div>
                       <h3>{selectedLabel}</h3>
