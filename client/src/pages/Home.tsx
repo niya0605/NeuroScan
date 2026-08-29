@@ -30,7 +30,7 @@ import {
   resultLabel,
 } from "@shared/model";
 
-const STORAGE_ATLAS = "/manus-storage/atlas-linework_e1bc9e39.png";
+const STORAGE_ATLAS = "/storage/atlas-linework_e1bc9e39.png";
 
 // Default current-scan image from the project assets
 const DEFAULT_PLACEHOLDER_SVG = new URL("../../../brainimg.png", import.meta.url)
