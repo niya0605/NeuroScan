@@ -66,8 +66,6 @@ __pycache__/
 *.pyo
 
 # Model weights and project assets
-model/*.keras
-*.keras
 *.weights
 *.h5
 *.onnx
