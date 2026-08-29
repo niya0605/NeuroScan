@@ -37,18 +37,21 @@ function runWorker(imagePath: string): Promise<InferenceResult> {
   return new Promise((resolve, reject) => {
     const worker = spawn(
       "python3",
-      [path.resolve(process.cwd(), "scripts/infer.py"), imagePath],
-      { stdio: ["ignore", "pipe", "pipe"] }
+      [path.resolve(process.cwd(), "scripts/infer.py")],
+      { stdio: ["pipe", "pipe", "pipe"] }
     );
+
     let stdout = "";
     let stderr = "";
     let settled = false;
+
     const finish = (callback: () => void) => {
       if (settled) return;
       settled = true;
       clearTimeout(timeout);
       callback();
     };
+
     const timeout = setTimeout(() => {
       worker.kill("SIGTERM");
       finish(() =>
@@ -59,16 +62,23 @@ function runWorker(imagePath: string): Promise<InferenceResult> {
         )
       );
     }, WORKER_TIMEOUT_MS);
+
     worker.stdout.on("data", (chunk: Buffer) => {
       stdout += chunk.toString();
     });
+
     worker.stderr.on("data", (chunk: Buffer) => {
       stderr += chunk.toString();
     });
-    worker.once("error", error => finish(() => reject(error)));
+
+    worker.once("error", error =>
+      finish(() => reject(error))
+    );
+
     worker.once("close", code => {
       finish(() => {
         if (code !== 0) {
+          console.error("[Inference] Python worker error:", stderr);
           reject(
             new Error(
               "The model could not analyze this image. Please upload a valid PNG or JPEG MRI image."
@@ -76,13 +86,37 @@ function runWorker(imagePath: string): Promise<InferenceResult> {
           );
           return;
         }
+
         try {
-          resolve(JSON.parse(stdout.trim()) as InferenceResult);
+          const response = JSON.parse(stdout.trim()) as {
+            ok: boolean;
+            result?: InferenceResult;
+            error?: string;
+          };
+
+          if (!response.ok || !response.result) {
+            reject(
+              new Error(
+                response.error ||
+                  "The model could not analyze this image."
+              )
+            );
+            return;
+          }
+
+          resolve(response.result);
         } catch {
+          console.error("[Inference] Invalid worker response:", stdout);
           reject(new Error("Inference worker returned an invalid response"));
         }
       });
     });
+
+    worker.stdin.write(
+      JSON.stringify({ image_path: imagePath }) + "\n"
+    );
+
+    worker.stdin.end();
   });
 }
 
