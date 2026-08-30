@@ -28,6 +28,7 @@ type WorkerResponse = {
 let workerProcess: ChildProcessWithoutNullStreams | null = null;
 let workerBuffer = "";
 let workerQueue: Promise<unknown> = Promise.resolve();
+let currentReject: ((error: Error) => void) | null = null;
 
 function hasSupportedImageSignature(buffer: Buffer) {
   const jpeg =
@@ -77,12 +78,26 @@ function startWorker() {
 
     workerProcess = null;
     workerBuffer = "";
+
+    if (currentReject) {
+      currentReject(
+        new Error(
+          `Inference worker crashed (code=${code}, signal=${signal}). This is usually an out-of-memory kill on the server.`
+        )
+      );
+      currentReject = null;
+    }
   });
 
   worker.once("error", error => {
     console.error("[Inference] Python worker error:", error);
     workerProcess = null;
     workerBuffer = "";
+
+    if (currentReject) {
+      currentReject(error instanceof Error ? error : new Error(String(error)));
+      currentReject = null;
+    }
   });
 
   return worker;
@@ -166,13 +181,17 @@ function runWorker(imagePath: string): Promise<InferenceResult> {
 
       resolve = value => {
         cleanup();
+        currentReject = null;
         originalResolve(value);
       };
 
       reject = error => {
         cleanup();
+        currentReject = null;
         originalReject(error);
       };
+
+      currentReject = reject;
     });
 
   const queued = workerQueue.then(execute, execute);
