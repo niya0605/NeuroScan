@@ -121,23 +121,31 @@ def generate_gradcam(model, image, predicted_index):
 
 
 def analyze(image_path: str):
+    print("[Inference] Starting analysis", file=sys.stderr, flush=True)
+
     model = get_model()
+    print("[Inference] Model ready", file=sys.stderr, flush=True)
 
     image = Image.open(image_path).convert("RGB")
+    print("[Inference] Image loaded", file=sys.stderr, flush=True)
 
     array = np.asarray(
         image.resize(IMG_SIZE),
         dtype=np.float32,
     )
+    print("[Inference] Image preprocessed", file=sys.stderr, flush=True)
 
     probabilities = model.predict(
         np.expand_dims(array, axis=0),
         verbose=0,
     )[0]
+    print("[Inference] Prediction completed", file=sys.stderr, flush=True)
 
     predicted_index = int(np.argmax(probabilities))
 
-    return {
+    print("[Inference] Starting GradCAM", file=sys.stderr, flush=True)
+
+    result = {
         "prediction": CLASS_NAMES[predicted_index],
         "confidence": round(
             float(probabilities[predicted_index]) * 100,
@@ -160,6 +168,9 @@ def analyze(image_path: str):
         "imageHeight": image.height,
     }
 
+    print("[Inference] GradCAM completed", file=sys.stderr, flush=True)
+
+    return result
 
 def main():
     for line in sys.stdin:
