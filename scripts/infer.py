@@ -14,6 +14,7 @@ from PIL import Image
 
 CLASS_NAMES = ["glioma", "meningioma", "notumor", "pituitary"]
 IMG_SIZE = (224, 224)
+OUTPUT_MAX_DIM = 512  # NEW: cap the size of images sent back to the client
 
 MODEL_PATH = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
@@ -35,9 +36,18 @@ def get_model():
     return MODEL
 
 
+def downscale_for_output(image: Image.Image) -> Image.Image:
+    if max(image.size) <= OUTPUT_MAX_DIM:
+        return image
+
+    ratio = OUTPUT_MAX_DIM / max(image.size)
+    new_size = (int(image.width * ratio), int(image.height * ratio))
+    return image.resize(new_size, Image.LANCZOS)
+
+
 def image_to_base64(image: Image.Image) -> str:
     buffer = io.BytesIO()
-    image.save(buffer, format="PNG")
+    image.save(buffer, format="PNG", optimize=True)
     return base64.b64encode(buffer.getvalue()).decode("utf-8")
 
 
@@ -83,19 +93,21 @@ def generate_gradcam(model, image, predicted_index):
         heatmap,
     ).numpy()
 
+    output_image = downscale_for_output(image)
+
     heatmap_resized = (
         tf.image.resize(
             heatmap[..., np.newaxis],
-            (image.height, image.width),
+            (output_image.height, output_image.width),
         )
         .numpy()
         .squeeze()
     )
 
-    figure = plt.figure(figsize=(7, 6), frameon=False)
+    figure = plt.figure(figsize=(6, 5), frameon=False)
     axis = figure.add_axes([0, 0, 1, 1])
 
-    axis.imshow(image)
+    axis.imshow(output_image)
     axis.imshow(
         heatmap_resized,
         cmap="jet",
@@ -112,7 +124,7 @@ def generate_gradcam(model, image, predicted_index):
         format="png",
         bbox_inches="tight",
         pad_inches=0,
-        dpi=150,
+        dpi=90,
     )
 
     plt.close(figure)
@@ -137,6 +149,8 @@ def analyze(image_path: str):
 
     predicted_index = int(np.argmax(probabilities))
 
+    output_image = downscale_for_output(image)
+
     return {
         "prediction": CLASS_NAMES[predicted_index],
         "confidence": round(
@@ -150,14 +164,14 @@ def analyze(image_path: str):
             )
             for index, name in enumerate(CLASS_NAMES)
         },
-        "originalImage": image_to_base64(image),
+        "originalImage": image_to_base64(output_image),
         "gradcam": generate_gradcam(
             model,
             image,
             predicted_index,
         ),
-        "imageWidth": image.width,
-        "imageHeight": image.height,
+        "imageWidth": output_image.width,
+        "imageHeight": output_image.height,
     }
 
 
