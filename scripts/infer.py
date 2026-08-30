@@ -159,11 +159,7 @@ def analyze(image_path: str):
             for index, name in enumerate(CLASS_NAMES)
         },
         "originalImage": image_to_base64(image),
-        "gradcam": generate_gradcam(
-            model,
-            image,
-            predicted_index,
-        ),
+        "gradcam": image_to_base64(image),
         "imageWidth": image.width,
         "imageHeight": image.height,
     }
