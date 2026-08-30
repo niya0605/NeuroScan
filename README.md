@@ -113,12 +113,22 @@ NEUROSCAN/
 
 The included model is provided as a research artifact and has known classification limitations.
 
-During testing, some labeled tumor images were incorrectly classified as **No Tumor**, sometimes with relatively high confidence.
+It was retrained on the public [Brain Tumor MRI Dataset](https://www.kaggle.com/datasets/masoudnickparvar/brain-tumor-mri-dataset) (glioma/meningioma/notumor/pituitary, ~7k images) using transfer learning on an EfficientNetB0 backbone, evaluated on a held-out test set of 1,600 images never seen during training:
 
+| Class | Precision | Recall | F1 |
+| --- | --- | --- | --- |
+| glioma | 0.95 | 0.74 | 0.83 |
+| meningioma | 0.86 | 0.85 | 0.86 |
+| notumor | 0.92 | 0.99 | 0.96 |
+| pituitary | 0.87 | 1.00 | 0.93 |
+
+Overall accuracy: **90%**. See `model/training_report.json` for the full classification report and confusion matrix.
+
+Glioma remains the weakest class (74% recall), most often confused with meningioma — a distinction that is genuinely difficult from a single 2D slice without clinical context, and one radiologists themselves don't always agree on from imaging alone. On real-world test images, some labeled glioma scans are still misclassified, sometimes with high confidence.
 
 These results indicate that the current model should **not** be treated as clinically accurate.
 
-Improving the model would require access to the original labeled dataset, proper retraining, validation on a held-out test set, and documented preprocessing and class mappings.
+Training code is in `scripts/train_model.py` and `scripts/continue_training.py`. Further improvement would likely require more/higher-quality labeled data, addressing glioma/meningioma confusion specifically, or a stronger backbone.
 
 The application intentionally displays the model's actual output rather than modifying or fabricating predictions.
 
