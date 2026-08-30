@@ -4,36 +4,39 @@ import json
 import os
 import sys
 
-import matplotlib
-
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
 import numpy as np
-import tensorflow as tf
 from PIL import Image
+from ai_edge_litert.interpreter import Interpreter
 
 CLASS_NAMES = ["glioma", "meningioma", "notumor", "pituitary"]
 IMG_SIZE = (224, 224)
-OUTPUT_MAX_DIM = 512  # NEW: cap the size of images sent back to the client
+OUTPUT_MAX_DIM = 512
 
-MODEL_PATH = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-    "model",
-    "brain_tumor_model.keras",
-)
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+FEATURE_MODEL_PATH = os.path.join(BASE_DIR, "model", "feature_extractor.tflite")
 
-MODEL = None
+DENSE_W = np.load(os.path.join(BASE_DIR, "model", "dense_w.npy"))
+DENSE_B = np.load(os.path.join(BASE_DIR, "model", "dense_b.npy"))
+DENSE1_W = np.load(os.path.join(BASE_DIR, "model", "dense1_w.npy"))
+DENSE1_B = np.load(os.path.join(BASE_DIR, "model", "dense1_b.npy"))
+
+INTERPRETER = None
+INPUT_DETAILS = None
+OUTPUT_DETAILS = None
 
 
-def get_model():
-    global MODEL
+def get_interpreter():
+    global INTERPRETER, INPUT_DETAILS, OUTPUT_DETAILS
 
-    if MODEL is None:
-        print("[Inference] Loading model...", file=sys.stderr, flush=True)
-        MODEL = tf.keras.models.load_model(MODEL_PATH)
+    if INTERPRETER is None:
+        print("[Inference] Loading feature extractor...", file=sys.stderr, flush=True)
+        INTERPRETER = Interpreter(model_path=FEATURE_MODEL_PATH)
+        INTERPRETER.allocate_tensors()
+        INPUT_DETAILS = INTERPRETER.get_input_details()
+        OUTPUT_DETAILS = INTERPRETER.get_output_details()
         print("[Inference] Model loaded.", file=sys.stderr, flush=True)
 
-    return MODEL
+    return INTERPRETER
 
 
 def downscale_for_output(image: Image.Image) -> Image.Image:
@@ -51,101 +54,74 @@ def image_to_base64(image: Image.Image) -> str:
     return base64.b64encode(buffer.getvalue()).decode("utf-8")
 
 
-def generate_gradcam(model, image, predicted_index):
-    efficientnet = model.layers[0]
+def softmax(x):
+    e = np.exp(x - np.max(x))
+    return e / e.sum()
 
-    resized = image.resize(IMG_SIZE)
-    array = np.asarray(resized, dtype=np.float32)
-    tensor = np.expand_dims(array, axis=0)
 
-    _ = efficientnet(tensor, training=False)
+def colorize_heatmap(heatmap: np.ndarray) -> np.ndarray:
+    r = np.clip(1.5 - np.abs(4 * heatmap - 3), 0, 1)
+    g = np.clip(1.5 - np.abs(4 * heatmap - 2), 0, 1)
+    b = np.clip(1.5 - np.abs(4 * heatmap - 1), 0, 1)
+    return np.stack([r, g, b], axis=-1)
 
-    grad_model = tf.keras.models.Model(
-        inputs=efficientnet.input,
-        outputs=[
-            efficientnet.get_layer("top_conv").output,
-            efficientnet.output,
-        ],
+
+def generate_gradcam(features: np.ndarray, predicted_index: int, output_image: Image.Image) -> str:
+    pooled = features.mean(axis=(0, 1))
+
+    z1 = pooled @ DENSE_W + DENSE_B
+    a1 = np.maximum(z1, 0)
+
+    z2 = a1 @ DENSE1_W + DENSE1_B
+
+    dz2 = np.zeros_like(z2)
+    dz2[predicted_index] = 1.0
+
+    da1 = DENSE1_W @ dz2
+    dz1 = da1 * (z1 > 0)
+    dpooled = DENSE_W @ dz1
+
+    cam = np.maximum(np.sum(features * dpooled, axis=-1), 0)
+
+    max_value = cam.max()
+    if max_value > 0:
+        cam = cam / max_value
+
+    heatmap_img = Image.fromarray((cam * 255).astype(np.uint8))
+    heatmap_resized = heatmap_img.resize(
+        (output_image.width, output_image.height), Image.BILINEAR
     )
+    heatmap_arr = np.asarray(heatmap_resized, dtype=np.float32) / 255.0
 
-    with tf.GradientTape() as tape:
-        conv_outputs, features = grad_model(tensor, training=False)
+    base = np.asarray(output_image, dtype=np.float32) / 255.0
+    heat_rgb = colorize_heatmap(heatmap_arr)
 
-        head_output = features
-        for layer in model.layers[1:]:
-            head_output = layer(head_output)
-
-        class_score = head_output[:, predicted_index]
-
-    gradients = tape.gradient(class_score, conv_outputs)
-
-    pooled = tf.reduce_mean(gradients, axis=(0, 1, 2))
-    conv_outputs = conv_outputs[0]
-
-    heatmap = tf.reduce_sum(conv_outputs * pooled, axis=-1)
-    heatmap = tf.maximum(heatmap, 0)
-
-    max_value = tf.reduce_max(heatmap)
-
-    heatmap = tf.where(
-        max_value > 0,
-        heatmap / max_value,
-        heatmap,
-    ).numpy()
-
-    output_image = downscale_for_output(image)
-
-    heatmap_resized = (
-        tf.image.resize(
-            heatmap[..., np.newaxis],
-            (output_image.height, output_image.width),
-        )
-        .numpy()
-        .squeeze()
-    )
-
-    figure = plt.figure(figsize=(6, 5), frameon=False)
-    axis = figure.add_axes([0, 0, 1, 1])
-
-    axis.imshow(output_image)
-    axis.imshow(
-        heatmap_resized,
-        cmap="jet",
-        alpha=0.45,
-        vmin=0,
-        vmax=1,
-    )
-    axis.axis("off")
+    alpha = 0.45
+    overlay = base * (1 - alpha) + heat_rgb * alpha
+    overlay_img = Image.fromarray((overlay * 255).astype(np.uint8))
 
     buffer = io.BytesIO()
-
-    figure.savefig(
-        buffer,
-        format="png",
-        bbox_inches="tight",
-        pad_inches=0,
-        dpi=90,
-    )
-
-    plt.close(figure)
-
+    overlay_img.save(buffer, format="PNG", optimize=True)
     return base64.b64encode(buffer.getvalue()).decode("utf-8")
 
 
 def analyze(image_path: str):
-    model = get_model()
+    interpreter = get_interpreter()
 
     image = Image.open(image_path).convert("RGB")
 
-    array = np.asarray(
-        image.resize(IMG_SIZE),
-        dtype=np.float32,
-    )
+    array = np.asarray(image.resize(IMG_SIZE), dtype=np.float32)
+    input_data = np.expand_dims(array, axis=0)
 
-    probabilities = model.predict(
-        np.expand_dims(array, axis=0),
-        verbose=0,
-    )[0]
+    interpreter.set_tensor(INPUT_DETAILS[0]["index"], input_data)
+    interpreter.invoke()
+    features = interpreter.get_tensor(OUTPUT_DETAILS[0]["index"])[0]
+
+    pooled = features.mean(axis=(0, 1))
+    z1 = pooled @ DENSE_W + DENSE_B
+    a1 = np.maximum(z1, 0)
+    z2 = a1 @ DENSE1_W + DENSE1_B
+    probabilities = softmax(z2)
 
     predicted_index = int(np.argmax(probabilities))
 
@@ -153,23 +129,13 @@ def analyze(image_path: str):
 
     return {
         "prediction": CLASS_NAMES[predicted_index],
-        "confidence": round(
-            float(probabilities[predicted_index]) * 100,
-            2,
-        ),
+        "confidence": round(float(probabilities[predicted_index]) * 100, 2),
         "probabilities": {
-            name: round(
-                float(probabilities[index]) * 100,
-                2,
-            )
+            name: round(float(probabilities[index]) * 100, 2)
             for index, name in enumerate(CLASS_NAMES)
         },
         "originalImage": image_to_base64(output_image),
-        "gradcam": generate_gradcam(
-            model,
-            image,
-            predicted_index,
-        ),
+        "gradcam": generate_gradcam(features, predicted_index, output_image),
         "imageWidth": output_image.width,
         "imageHeight": output_image.height,
     }
@@ -178,36 +144,16 @@ def analyze(image_path: str):
 def main():
     for line in sys.stdin:
         line = line.strip()
-
         if not line:
             continue
 
         try:
             request = json.loads(line)
             image_path = request["image_path"]
-
             result = analyze(image_path)
-
-            print(
-                json.dumps(
-                    {
-                        "ok": True,
-                        "result": result,
-                    }
-                ),
-                flush=True,
-            )
-
+            print(json.dumps({"ok": True, "result": result}), flush=True)
         except Exception as error:
-            print(
-                json.dumps(
-                    {
-                        "ok": False,
-                        "error": str(error),
-                    }
-                ),
-                flush=True,
-            )
+            print(json.dumps({"ok": False, "error": str(error)}), flush=True)
 
 
 if __name__ == "__main__":
