@@ -9,7 +9,7 @@ from PIL import Image
 from ai_edge_litert.interpreter import Interpreter
 
 CLASS_NAMES = ["glioma", "meningioma", "notumor", "pituitary"]
-IMG_SIZE = (224, 224)
+IMG_SIZE = (300, 300)
 OUTPUT_MAX_DIM = 512
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
