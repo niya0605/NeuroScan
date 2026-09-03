@@ -178,3 +178,7 @@ temp/
 # Auto-generated version file (not part of source)
 client/public/__version__/version.json
 .project-config.json
+
+# Training run logs (local only)
+.trainlogs/
+model/brain_tumor_model.checkpoint.keras
