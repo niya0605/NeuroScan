@@ -113,22 +113,22 @@ NEUROSCAN/
 
 The included model is provided as a research artifact and has known classification limitations.
 
-It was retrained on the public [Brain Tumor MRI Dataset](https://www.kaggle.com/datasets/masoudnickparvar/brain-tumor-mri-dataset) (glioma/meningioma/notumor/pituitary, ~7k images) using transfer learning on an EfficientNetB0 backbone, evaluated on a held-out test set of 1,600 images never seen during training:
+It was retrained on the public [Brain Tumor MRI Dataset](https://www.kaggle.com/datasets/masoudnickparvar/brain-tumor-mri-dataset) (glioma/meningioma/notumor/pituitary, ~7k images) using transfer learning on an EfficientNetB0 backbone at 300x300 resolution with the full backbone fine-tuned, evaluated on a held-out test set of 1,600 images never seen during training:
 
 | Class | Precision | Recall | F1 |
 | --- | --- | --- | --- |
-| glioma | 0.95 | 0.74 | 0.83 |
-| meningioma | 0.86 | 0.85 | 0.86 |
-| notumor | 0.92 | 0.99 | 0.96 |
-| pituitary | 0.87 | 1.00 | 0.93 |
+| glioma | 1.00 | 0.72 | 0.84 |
+| meningioma | 0.87 | 0.92 | 0.90 |
+| notumor | 0.92 | 1.00 | 0.96 |
+| pituitary | 0.88 | 1.00 | 0.93 |
 
-Overall accuracy: **90%**. See `model/training_report.json` for the full classification report and confusion matrix.
+Overall accuracy: **91%**. See `model/training_report.json` for the full classification report and confusion matrix.
 
-Glioma remains the weakest class (74% recall), most often confused with meningioma — a distinction that is genuinely difficult from a single 2D slice without clinical context, and one radiologists themselves don't always agree on from imaging alone. On real-world test images, some labeled glioma scans are still misclassified, sometimes with high confidence.
+Glioma remains the weakest class (72% recall) — when the model says glioma it's always right (100% precision), but it still misses about 1 in 4 real glioma cases, mostly calling them meningioma instead. That distinction is genuinely difficult from a single 2D slice without clinical context, and one radiologists themselves don't always agree on from imaging alone. On some real-world glioma images, the model is confidently wrong (>99% on the wrong class) rather than uncertain — retraining reduced how often it's wrong overall, but made it more confident, not less, on the cases it still misses.
 
 These results indicate that the current model should **not** be treated as clinically accurate.
 
-Training code is in `scripts/train_model.py` and `scripts/continue_training.py`. Further improvement would likely require more/higher-quality labeled data, addressing glioma/meningioma confusion specifically, or a stronger backbone.
+Training code is in `scripts/train_model.py`, `scripts/continue_training.py`, and `scripts/train_highres.py`. Further improvement on glioma specifically would likely require more/higher-quality labeled data or a fundamentally different approach (e.g. an ensemble, or additional input beyond a single slice) rather than more training on this dataset.
 
 The application intentionally displays the model's actual output rather than modifying or fabricating predictions.
 
