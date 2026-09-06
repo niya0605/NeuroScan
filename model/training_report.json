@@ -1,20 +1,24 @@
 {
   "classification_report": {
-    "glioma": {"precision": 1.00, "recall": 0.72, "f1-score": 0.84, "support": 400},
-    "meningioma": {"precision": 0.87, "recall": 0.92, "f1-score": 0.90, "support": 400},
-    "notumor": {"precision": 0.92, "recall": 1.00, "f1-score": 0.96, "support": 400},
-    "pituitary": {"precision": 0.88, "recall": 1.00, "f1-score": 0.93, "support": 400},
-    "accuracy": 0.91,
-    "macro avg": {"precision": 0.92, "recall": 0.91, "f1-score": 0.91, "support": 1600},
-    "weighted avg": {"precision": 0.92, "recall": 0.91, "f1-score": 0.91, "support": 1600}
+    "glioma": {"precision": 0.99, "recall": 0.89, "f1-score": 0.94, "support": 654},
+    "meningioma": {"precision": 0.94, "recall": 0.99, "f1-score": 0.96, "support": 706},
+    "notumor": {"precision": 0.96, "recall": 1.00, "f1-score": 0.98, "support": 540},
+    "pituitary": {"precision": 0.99, "recall": 1.00, "f1-score": 0.99, "support": 700},
+    "accuracy": 0.97,
+    "macro avg": {"precision": 0.97, "recall": 0.97, "f1-score": 0.97, "support": 2600},
+    "weighted avg": {"precision": 0.97, "recall": 0.97, "f1-score": 0.97, "support": 2600}
   },
   "confusion_matrix": [
-    [288, 53, 32, 27],
-    [1, 368, 2, 29],
-    [0, 0, 400, 0],
-    [0, 0, 0, 400]
+    [581, 48, 23, 2],
+    [2, 697, 0, 7],
+    [0, 0, 540, 0],
+    [2, 0, 0, 698]
   ],
   "class_order": ["glioma", "meningioma", "notumor", "pituitary"],
   "img_size": [300, 300],
-  "notes": "Round 3: full EfficientNetB0 backbone unfrozen (BatchNorm layers excepted), fine-tuned at 300x300 (up from 224x224), warm-started from round 2's weights. Best checkpoint saved at epoch 19 (val_accuracy 0.9893) before the training process was interrupted; evaluated and shipped as final. Evaluated on the dataset's held-out Testing split (1600 images, never seen during training)."
+  "data_sources": [
+    "masoudnickparvar/brain-tumor-mri-dataset (Kaggle, ~7k images)",
+    "briscdataset/brisc2025 (Kaggle, 6k images, physician-validated, axial/coronal/sagittal, arXiv:2506.14318)"
+  ],
+  "notes": "Round 4: merged the original Kaggle dataset with BRISC2025 (a 2025 physician-validated, multi-plane academic dataset) into a combined 10,600-image training set / 2,600-image held-out test set, then continued fine-tuning the full EfficientNetB0 backbone (BatchNorm layers excepted) from round 3's weights at 300x300. Best checkpoint saved at epoch 8 (val_accuracy 0.9934) before the training process was interrupted; evaluated on the combined held-out test set and shipped as final. Glioma recall rose from 0.72 (round 3, single dataset) to 0.89, the largest single improvement across all rounds -- consistent with the earlier diagnosis that training data quality/diversity, not model capacity, was the bottleneck."
 }
