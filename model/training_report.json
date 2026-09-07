@@ -1,24 +1,83 @@
 {
   "classification_report": {
-    "glioma": {"precision": 0.99, "recall": 0.89, "f1-score": 0.94, "support": 654},
-    "meningioma": {"precision": 0.94, "recall": 0.99, "f1-score": 0.96, "support": 706},
-    "notumor": {"precision": 0.96, "recall": 1.00, "f1-score": 0.98, "support": 540},
-    "pituitary": {"precision": 0.99, "recall": 1.00, "f1-score": 0.99, "support": 700},
-    "accuracy": 0.97,
-    "macro avg": {"precision": 0.97, "recall": 0.97, "f1-score": 0.97, "support": 2600},
-    "weighted avg": {"precision": 0.97, "recall": 0.97, "f1-score": 0.97, "support": 2600}
+    "glioma": {
+      "precision": 0.9949409780775716,
+      "recall": 0.9021406727828746,
+      "f1-score": 0.946271050521251,
+      "support": 654.0
+    },
+    "meningioma": {
+      "precision": 0.9385026737967914,
+      "recall": 0.9943342776203966,
+      "f1-score": 0.9656121045392022,
+      "support": 706.0
+    },
+    "notumor": {
+      "precision": 0.9694793536804309,
+      "recall": 1.0,
+      "f1-score": 0.9845031905195989,
+      "support": 540.0
+    },
+    "pituitary": {
+      "precision": 0.9943019943019943,
+      "recall": 0.9971428571428571,
+      "f1-score": 0.9957203994293866,
+      "support": 700.0
+    },
+    "accuracy": 0.9730769230769231,
+    "macro avg": {
+      "precision": 0.974306249964197,
+      "recall": 0.9734044518865321,
+      "f1-score": 0.9730266862523598,
+      "support": 2600.0
+    },
+    "weighted avg": {
+      "precision": 0.9741555901392673,
+      "recall": 0.9730769230769231,
+      "f1-score": 0.9727766982025879,
+      "support": 2600.0
+    }
   },
   "confusion_matrix": [
-    [581, 48, 23, 2],
-    [2, 697, 0, 7],
-    [0, 0, 540, 0],
-    [2, 0, 0, 698]
+    [
+      590,
+      46,
+      17,
+      1
+    ],
+    [
+      1,
+      702,
+      0,
+      3
+    ],
+    [
+      0,
+      0,
+      540,
+      0
+    ],
+    [
+      2,
+      0,
+      0,
+      698
+    ]
   ],
-  "class_order": ["glioma", "meningioma", "notumor", "pituitary"],
-  "img_size": [300, 300],
+  "class_order": [
+    "glioma",
+    "meningioma",
+    "notumor",
+    "pituitary"
+  ],
+  "img_size": [
+    300,
+    300
+  ],
+  "focal_gamma": 2.0,
   "data_sources": [
     "masoudnickparvar/brain-tumor-mri-dataset (Kaggle, ~7k images)",
     "briscdataset/brisc2025 (Kaggle, 6k images, physician-validated, axial/coronal/sagittal, arXiv:2506.14318)"
   ],
-  "notes": "Round 4: merged the original Kaggle dataset with BRISC2025 (a 2025 physician-validated, multi-plane academic dataset) into a combined 10,600-image training set / 2,600-image held-out test set, then continued fine-tuning the full EfficientNetB0 backbone (BatchNorm layers excepted) from round 3's weights at 300x300. Best checkpoint saved at epoch 8 (val_accuracy 0.9934) before the training process was interrupted; evaluated on the combined held-out test set and shipped as final. Glioma recall rose from 0.72 (round 3, single dataset) to 0.89, the largest single improvement across all rounds -- consistent with the earlier diagnosis that training data quality/diversity, not model capacity, was the bottleneck."
+  "notes": "Round 5: continued fine-tuning round 4's model on the same merged dataset using categorical focal loss (gamma=2.0) instead of plain cross-entropy -- focal loss down-weights already-easy examples and concentrates gradient on hard ones, a different mechanism than class-weighting (tried previously, no effect). Glioma recall rose from 0.89 to 0.90 (9 fewer misclassifications: 590/654 vs 581/654), pituitary reached near-perfect F1. A prior full-model ensemble (2 independently-trained models averaged) had shown 0% improvement over the single model and confirmed 0.89 recall as a reproducible ceiling for plain cross-entropy training on this data -- focal loss modestly moved past that ceiling. Two known hard real-world images (used as ongoing spot-checks, not part of training or the formal test set) remain misclassified as meningioma, consistent with the fact that even at 90% recall roughly 1 in 10 real glioma cases is still missed."
 }

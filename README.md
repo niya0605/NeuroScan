@@ -117,18 +117,18 @@ It was retrained on a combination of two datasets: the [Brain Tumor MRI Dataset]
 
 | Class | Precision | Recall | F1 |
 | --- | --- | --- | --- |
-| glioma | 0.99 | 0.89 | 0.94 |
-| meningioma | 0.94 | 0.99 | 0.96 |
-| notumor | 0.96 | 1.00 | 0.98 |
-| pituitary | 0.99 | 1.00 | 0.99 |
+| glioma | 0.99 | 0.90 | 0.95 |
+| meningioma | 0.94 | 0.99 | 0.97 |
+| notumor | 0.97 | 1.00 | 0.98 |
+| pituitary | 0.99 | 1.00 | 1.00 |
 
 Overall accuracy: **97%**. See `model/training_report.json` for the full classification report and confusion matrix.
 
-Glioma recall rose from 72% (single-dataset model) to 89% once a second, physician-validated, multi-plane dataset was added — the largest single improvement across all retraining rounds, and evidence that training-data diversity, not model capacity, was the real bottleneck. It's still the weakest class: roughly 1 in 9 real glioma cases is missed, almost always as meningioma rather than notumor — a meaningfully smaller error than earlier rounds (which more often missed the tumor as "no tumor" entirely), but still a real limitation.
+Glioma recall rose from 72% (single-dataset model) to 89% once a second, physician-validated, multi-plane dataset was added, then to 90% after switching the final fine-tuning pass to focal loss (which concentrates training on hard/misclassified examples instead of weighting all examples equally). Two other angles were tried and genuinely didn't help: uniform class-weighting, and a full two-model ensemble — the ensemble in particular showed two independently-trained models converging on the identical error rate, confirming this is a real, reproducible limit of the current data rather than one unlucky training run. It's still the weakest class: roughly 1 in 10 real glioma cases is missed, almost always as meningioma rather than notumor — a meaningfully smaller and less severe error than early rounds (which most often missed the tumor as "no tumor" entirely), but still a real limitation.
 
 These results indicate that the current model should **not** be treated as clinically accurate.
 
-Training code is in `scripts/train_model.py`, `scripts/continue_training.py`, `scripts/train_highres.py`, and `scripts/train_merged.py` (the multi-dataset merge). Further improvement would likely require additional labeled data (ideally more glioma/meningioma boundary cases) rather than further tuning on what's already here.
+Training code is in `scripts/train_model.py`, `scripts/continue_training.py`, `scripts/train_highres.py`, `scripts/train_merged.py` (the multi-dataset merge), and `scripts/train_focal.py` (focal loss). Further improvement would likely require additional labeled data (ideally more glioma/meningioma boundary cases) rather than further tuning on what's already here.
 
 The application intentionally displays the model's actual output rather than modifying or fabricating predictions.
 
