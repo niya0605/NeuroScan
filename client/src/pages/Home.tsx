@@ -26,6 +26,7 @@ import {
   CLASS_NAMES as CLASSES,
   LOW_CONFIDENCE_THRESHOLD,
   displayLabel,
+  isConfusablePrediction,
   isNoTumor,
   resultLabel,
 } from "@shared/model";
@@ -229,6 +230,14 @@ export default function Home() {
           }))
         : [],
     [result]
+  );
+  const runnerUp = useMemo(() => {
+    if (!result) return null;
+    const sorted = [...distribution].sort((a, b) => b.value - a.value);
+    return sorted[1] ?? null;
+  }, [result, distribution]);
+  const showConfusableNotice = Boolean(
+    result && isConfusablePrediction(result.prediction)
   );
   return (
     <div className="dashboard-shell">
@@ -478,7 +487,24 @@ export default function Home() {
                       <span>0%</span>
                       <span>100%</span>
                     </div>
+                    {runnerUp && runnerUp.value > 0 && (
+                      <p className="runner-up">
+                        Next most likely: {displayLabel(runnerUp.name)} (
+                        {runnerUp.value}%)
+                      </p>
+                    )}
                   </div>
+                  {showConfusableNotice && (
+                    <div className="confusable-notice">
+                      <CircleHelp size={15} />
+                      <p>
+                        Glioma and meningioma are the two classes this model
+                        confuses most often — even when it reports high
+                        confidence. Have this result confirmed by a
+                        radiologist regardless of the score above.
+                      </p>
+                    </div>
+                  )}
                   <div className="details-list">
                     <h3>Analysis Details</h3>
                     <div>

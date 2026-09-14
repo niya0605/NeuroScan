@@ -646,6 +646,34 @@ a:focus-visible {
   font-size: 10px;
   margin-top: 7px;
 }
+.runner-up {
+  margin: 12px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid #1d3048;
+  font-size: 11px;
+  color: #8d9bb0;
+}
+.confusable-notice {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin-top: 15px;
+  padding: 13px 15px;
+  border: 1px solid rgba(242, 56, 104, 0.35);
+  border-radius: 7px;
+  background: rgba(242, 56, 104, 0.08);
+}
+.confusable-notice svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: #f23868;
+}
+.confusable-notice p {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: #d7b3bc;
+}
 .details-list,
 .distribution-box {
   margin-top: 17px;
@@ -1276,6 +1304,17 @@ a:focus-visible {
 }
 :root:not(.dark) .confidence-box span {
   color: #3d5572;
+}
+:root:not(.dark) .runner-up {
+  color: #5a6f8a;
+  border-top-color: #e0e7f0;
+}
+:root:not(.dark) .confusable-notice {
+  background: rgba(242, 56, 104, 0.06);
+  border-color: rgba(242, 56, 104, 0.25);
+}
+:root:not(.dark) .confusable-notice p {
+  color: #7a2c3c;
 }
 :root:not(.dark) .confidence-track,
 :root:not(.dark) .dist-row > div {
