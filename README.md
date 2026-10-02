@@ -2,8 +2,6 @@
 
 An AI-based web application that analyzes brain MRI scans and provides tumor classification results with confidence scores and visual insights.
 
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/niya0605/NeuroScan)
-
 ## 🚀 [Visit the Live App](https://neuroscan-2ofg.onrender.com)
 
 ## Overview
