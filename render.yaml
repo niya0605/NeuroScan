@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: neurolens
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    port: 3000
+    envVars:
+      - key: NODE_ENV
+        value: production
+    buildCommand: npm ci && npm run build
+    startCommand: npm start

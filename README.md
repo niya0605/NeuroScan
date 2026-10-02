@@ -2,6 +2,8 @@
 
 An AI-based web application that analyzes brain MRI scans and provides tumor classification results with confidence scores and visual insights.
 
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/niya0605/NeuroScan)
+
 ## Overview
 
 NeuroScan is a web-based MRI analysis dashboard built to demonstrate how a machine learning model can be integrated into an interactive application.
